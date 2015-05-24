@@ -52,12 +52,19 @@ d3.select('body').on('keydown', function(d) {
         .data(pie(data));
     path.transition().duration(chartProperties.transitionDuration)
       .attrTween("d", arcTween);
-    path.enter().append("path")
+    var slice = path.enter().append("g")
+      .attr('class', 'slice');
+    slice.append("path")
         .attr("fill", function(d, i) { return color(i); })
         .attr("d", arc)
-        .each(function(d){ this._current = d; })
-        .append('text')
-        .text(function(d) {return d.letter;});
+        .each(function(d){ this._current = d; });
+    slice.append('text')
+      .attr("transform", function(d) {
+        d.outerRadius = chartProperties.radius + 50; // Set Outer Coordinate
+        d.innerRadius = chartProperties.radius + 45; // Set Inner Coordinate
+        return "translate(" + arc.centroid(d) + ")";
+      })
+      .text(function(d, i) {return data[i].letter;});
   }
 
   //update(data);
@@ -69,13 +76,16 @@ var update = function(data) {
         .data(pie(data));
     path.transition().duration(chartProperties.transitionDuration)
       .attrTween("d", arcTween);
-    path.attr("fill", function(d, i) { return color(i); })
-        .attr("d", arc)
-        // .each(function(d){ this._current = d; })
-        // .transition(1000)
-        .attrTween("d", arcTween)
-        .append('text')
-        .text(function(d) {return d.letter;});
+    var slices = d3.selectAll('.slice');
+    slices.attr("d", function(d) {return arc;});
+
+    slices.selectAll('text')
+      .attr("transform", function(d) {
+        d.outerRadius = chartProperties.radius + 50; // Set Outer Coordinate
+        d.innerRadius = chartProperties.radius + 45; // Set Inner Coordinate
+        return "translate(" + arc.centroid(d) + ")";
+      })
+      .text(function(d) {return d.letter;});
 };
 
 function arcTween(a) {
