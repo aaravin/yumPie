@@ -2,16 +2,34 @@
 
 var chartProperties = {
   width: 800,
-  height: 800
+  height: 800,
+  radius: 300,
+  transitionDuration: 500
 };
-
 var data = [];
+// var data = [{letter: 'A', count: 1},
+//     {letter: 'B', count: 2},
+//     {letter: 'C', count: 3}];
+// var data = [1, 2, 3];
+
+var color = d3.scale.category20();
+
+var pie = d3.layout.pie()
+  .value(function(d){ return d.count; })
+  .sort(null);
+
+var arc = d3.svg.arc()
+    .innerRadius(chartProperties.radius - 100)
+    .outerRadius(chartProperties.radius);
 
 var chart = d3.select('body')
               .append('svg')
-              .attr('height', 800)
-              .attr('width', 800);
-
+              .attr('height', chartProperties.height)
+              .attr('width', chartProperties.width)
+              .append("g")
+              .attr("transform", "translate(" +
+              chartProperties.width / 2 +
+              "," + chartProperties.height / 2 + ")");
 
 d3.select('body').on('keydown', function(d) {
   // bind data and append
@@ -19,7 +37,7 @@ d3.select('body').on('keydown', function(d) {
   var exists = false;
   data.forEach(function(item) {
     if (item.letter === character) {
-      item.r += 5;
+      item.count++;
       update(data);
       exists = true;
     }
@@ -28,40 +46,43 @@ d3.select('body').on('keydown', function(d) {
   if (!exists) {
     data.push({
       letter: character,
-      r: 20,
-      x: (d3.event.keyCode * 18) - 1000,
-      y: (d3.event.keyCode * 18) - 1000
+      count: 1
     });
-    var circleData = chart.selectAll('circle').data(data).enter();
-    circleData.append('circle')
-      .attr('r', function(d) { return d.r; })
-      .attr('cx', function(d) { return d.x; })
-      .attr('cy', function(d) { return d.y; })
-      .attr('fill', 'blue')
-      .attr('stroke', 'black');
-
-    circleData.append('text')
-      .attr('dx', function(d) {return d.x;})
-      .attr('dy', function(d) {return d.y;})
-      .text(character);
+    var path = chart.selectAll("path")
+        .data(pie(data));
+    path.transition().duration(chartProperties.transitionDuration)
+      .attrTween("d", arcTween);
+    path.enter().append("path")
+        .attr("fill", function(d, i) { return color(i); })
+        .attr("d", arc)
+        .each(function(d){ this._current = d; })
+        .append('text')
+        .text(function(d) {return d.letter;});
   }
 
   //update(data);
 
 });
 
-
 var update = function(data) {
-    var circleData = chart.selectAll('circle').data(data);
-    var textData = chart.selectAll('text').data(data);
-
-    circleData.transition(1000)
-    .attr('r', function(d) { return d.r; })
-    .attr('cx', function(d) { return d.x; })
-    .attr('cy', function(d) { return d.y; })
-    .attr('fill', 'blue');
-
-    // chart.selectAll('text')
-    //textData.text(function(d) {console.log(d.r); return d.r;});
+    var path = chart.selectAll("path")
+        .data(pie(data));
+    path.transition().duration(chartProperties.transitionDuration)
+      .attrTween("d", arcTween);
+    path.attr("fill", function(d, i) { return color(i); })
+        .attr("d", arc)
+        // .each(function(d){ this._current = d; })
+        // .transition(1000)
+        .attrTween("d", arcTween)
+        .append('text')
+        .text(function(d) {return d.letter;});
 };
+
+function arcTween(a) {
+  var i = d3.interpolate(this._current, a);
+  this._current = i(0);
+  return function(t) {
+  return arc(i(t));
+  };
+}
 
